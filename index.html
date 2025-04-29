@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 编程助手</title>
+    <title>AI 编程助手 v2</title>
     <!-- Marked.js for Markdown Parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Highlight.js for Code Highlighting -->
@@ -21,6 +21,7 @@
             --text-color: #212529;
             --primary-color: #007bff;
             --secondary-color: #6c757d;
+            --danger-color: #dc3545;
             --user-msg-bg: #e7f5ff;
             --assistant-msg-bg: #f1f3f5;
             --tool-call-bg: #fff9db;
@@ -39,6 +40,7 @@
             color: var(--text-color);
             font-size: 16px;
             line-height: 1.6;
+            overflow: hidden; /* Prevent body scroll */
         }
 
         .container {
@@ -46,29 +48,47 @@
             height: 100vh; /* Full viewport height */
             background-color: var(--container-bg);
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            max-width: 1600px; /* Limit max width */
+            max-width: 100%; /* Use full width */
             margin: 0 auto; /* Center container */
         }
 
         /* --- File Explorer --- */
         .file-explorer {
-            width: 250px;
+            width: 280px; /* Slightly wider */
+            flex-shrink: 0; /* Prevent shrinking */
             border-right: 1px solid var(--border-color);
             padding: 15px;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            background-color: #fdfdff; /* Slightly different shade */
+            background-color: #fdfdff;
         }
 
         .file-explorer h2 {
             margin-top: 0;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             font-size: 1.1em;
             color: var(--primary-color);
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 5px;
         }
+        .file-controls {
+            margin-bottom: 15px;
+        }
+        #upload-button {
+             width: 100%;
+             padding: 8px 10px;
+             background-color: var(--primary-color);
+             color: white;
+             border: none;
+             border-radius: 4px;
+             cursor: pointer;
+             font-size: 0.9em;
+        }
+        #upload-button:hover {
+            background-color: #0056b3;
+        }
+
 
         #file-list {
             list-style: none;
@@ -78,7 +98,7 @@
         }
 
         #file-list li {
-            padding: 8px 5px;
+            padding: 8px 10px; /* Increased padding */
             margin-bottom: 5px;
             border-radius: 4px;
             background-color: #fff;
@@ -87,8 +107,12 @@
             justify-content: space-between;
             align-items: center;
             font-size: 0.9em;
-            word-break: break-all; /* Prevent long names from overflowing */
         }
+         .file-name {
+             flex-grow: 1; /* Allow name to take space */
+             margin-right: 10px; /* Space before actions */
+             word-break: break-all; /* Break long names */
+         }
 
          #file-list li:hover {
             background-color: #f1f3f5;
@@ -98,15 +122,23 @@
             background: none;
             border: none;
             cursor: pointer;
-            font-size: 0.9em;
-            margin-left: 5px;
+            font-size: 1em; /* Slightly larger icons */
+            margin-left: 6px; /* Increased spacing */
             padding: 2px 4px;
             border-radius: 3px;
             color: var(--secondary-color);
+            line-height: 1; /* Align icons better */
         }
         .file-actions button:hover {
             background-color: var(--border-color);
             color: var(--text-color);
+        }
+        .delete-button { /* Specific style for delete */
+             color: var(--danger-color);
+        }
+        .delete-button:hover {
+             background-color: #f8d7da; /* Light red background on hover */
+             color: #58151c;
         }
 
 
@@ -116,6 +148,7 @@
             display: flex;
             flex-direction: column;
             height: 100%; /* Ensure it takes full height */
+            overflow: hidden; /* Prevent this section from causing body scroll */
         }
 
         /* --- Chat Interface --- */
@@ -130,8 +163,9 @@
             margin-bottom: 15px;
             padding: 12px 15px;
             border-radius: 8px;
-            max-width: 90%;
+            max-width: 95%; /* Allow slightly wider messages */
             word-wrap: break-word;
+             position: relative; /* Needed for potential absolute positioned elements inside */
         }
 
         .user-message {
@@ -197,16 +231,21 @@
             text-transform: uppercase;
         }
 
-        /* Code Blocks */
+        /* --- Code Blocks --- */
         .message pre {
             background-color: var(--code-bg);
             padding: 10px;
             border-radius: 5px;
-            overflow-x: auto;
             border: 1px solid #ced4da;
+            overflow-x: auto; /* <<< --- Key change for horizontal scroll --- */
+            max-width: 100%; /* Ensure pre doesn't try to expand beyond message width */
         }
 
-        .message code:not(pre code) { /* Inline code */
+        .message code { /* Applies to both inline and block code */
+             font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace; /* Monospace font */
+        }
+
+        .message code:not(pre code) { /* Inline code specific styling */
             background-color: var(--code-bg);
             padding: 2px 4px;
             border-radius: 3px;
@@ -220,6 +259,7 @@
             border-top: 1px solid var(--border-color); /* Add border */
             background-color: #f8f9fa; /* Slightly different background */
             align-items: flex-end; /* Align items to bottom */
+             flex-shrink: 0; /* Prevent shrinking */
         }
 
         #user-input {
@@ -233,6 +273,7 @@
             resize: vertical; /* Allow vertical resize */
             font-size: 1rem;
              line-height: 1.5;
+             overflow-y: auto; /* Add scroll if max-height is reached */
         }
 
         #user-input:focus {
@@ -252,6 +293,7 @@
             font-size: 1rem;
             margin-left: 5px;
             height: 44px; /* Match default input height */
+             flex-shrink: 0; /* Prevent buttons shrinking */
         }
 
         .input-area button:hover {
@@ -269,11 +311,13 @@
         /* --- Settings/Log Panel --- */
         .settings-log-panel {
             width: 300px;
+            flex-shrink: 0; /* Prevent shrinking */
             border-left: 1px solid var(--border-color);
             padding: 15px;
             display: flex;
             flex-direction: column;
             background-color: #fdfdff;
+             overflow-y: auto; /* Allow scrolling if settings/log get too long */
         }
 
         .settings-log-panel h2 {
@@ -322,7 +366,8 @@
          }
 
         #log-area {
-            flex-grow: 1;
+            /* flex-grow: 1; Remove flex-grow as panel itself scrolls */
+            height: 300px; /* Give log area a fixed height within the panel */
             overflow-y: auto;
             background-color: #fff;
             border: 1px solid var(--border-color);
@@ -330,6 +375,7 @@
             font-size: 0.85em;
             line-height: 1.4;
             border-radius: 4px;
+             margin-top: 5px; /* Space below toggle button */
         }
 
         .hidden {
@@ -359,6 +405,10 @@
         <!-- File Explorer -->
         <div class="file-explorer">
             <h2>文件列表</h2>
+            <div class="file-controls">
+                <input type="file" id="file-upload-input" style="display: none;" multiple> <!-- Hidden file input -->
+                <button id="upload-button">上传文件</button>
+            </div>
             <ul id="file-list">
                 <!-- File items will be generated by JS -->
             </ul>
@@ -370,7 +420,7 @@
                 <!-- Chat messages will appear here -->
                  <div class="message system-message">
                     <strong>系统</strong>
-                    你好！我是你的 AI 编程助手。告诉我你的需求，例如“创建一个名为 hello.py 的 Python 文件，并写入打印 'Hello, World!' 的代码”。
+                    你好！我是你的 AI 编程助手。告诉我你的需求，例如“创建一个名为 hello.py 的 Python 文件，并写入打印 'Hello, World!' 的代码”。你也可以上传或删除文件。
                 </div>
             </div>
             <div class="input-area">
@@ -411,7 +461,7 @@
              </div>
 
             <div class="log-section">
-                <button id="log-toggle-button">显示/隐藏 日志 ▼</button>
+                <button id="log-toggle-button">显示日志 ▼</button>
                  <div id="log-area" class="hidden">
                     <!-- Log messages will appear here -->
                  </div>
@@ -434,6 +484,8 @@
         const SEND_BUTTON = document.getElementById('send-button');
         const CLEAR_BUTTON = document.getElementById('clear-button');
         const FILE_LIST = document.getElementById('file-list');
+        const UPLOAD_BUTTON = document.getElementById('upload-button'); // New
+        const FILE_UPLOAD_INPUT = document.getElementById('file-upload-input'); // New
         const LOG_AREA = document.getElementById('log-area');
         const LOG_TOGGLE_BUTTON = document.getElementById('log-toggle-button');
 
@@ -451,15 +503,17 @@
             marked.setOptions({
                 highlight: function(code, lang) {
                     const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-                    return hljs.highlight(code, { language }).value;
+                    try {
+                         return hljs.highlight(code, { language, ignoreIllegals: true }).value;
+                    } catch (e) {
+                         console.error("Highlight.js error:", e, "Lang:", lang, "Code:", code);
+                         return hljs.highlightAuto(code).value; // Fallback to auto-detect
+                    }
                 },
                 langPrefix: 'hljs language-', // prefix for Go links and code blocks
                 gfm: true, // Enable GitHub Flavored Markdown
                 breaks: true, // Convert GFM line breaks to <br>
             });
-
-            // Initial highlight.js setup
-            // hljs.configure({ useBR: true }); // Optional: use <br> instead of \n in code blocks
 
             loadFilesFromLocalStorage();
             renderFileList();
@@ -467,7 +521,7 @@
             SEND_BUTTON.addEventListener('click', sendMessage);
             USER_INPUT.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault(); // Prevent default Enter behavior (new line)
+                    e.preventDefault();
                     sendMessage();
                 }
             });
@@ -475,6 +529,8 @@
 
             CLEAR_BUTTON.addEventListener('click', clearConversation);
             LOG_TOGGLE_BUTTON.addEventListener('click', toggleLog);
+            UPLOAD_BUTTON.addEventListener('click', () => FILE_UPLOAD_INPUT.click()); // New
+            FILE_UPLOAD_INPUT.addEventListener('change', handleFileUpload); // New
 
             // Initial resize
             autoResizeTextarea();
@@ -483,7 +539,16 @@
 
          function autoResizeTextarea() {
             USER_INPUT.style.height = 'auto'; // Temporarily shrink
-            USER_INPUT.style.height = USER_INPUT.scrollHeight + 'px'; // Set to scroll height
+            // Use scrollHeight but also consider max-height
+            const scrollHeight = USER_INPUT.scrollHeight;
+            const maxHeight = parseInt(window.getComputedStyle(USER_INPUT).maxHeight, 10);
+             if (scrollHeight > maxHeight) {
+                USER_INPUT.style.height = maxHeight + 'px';
+                USER_INPUT.style.overflowY = 'auto'; // Ensure scrollbar appears if needed
+            } else {
+                USER_INPUT.style.height = scrollHeight + 'px';
+                USER_INPUT.style.overflowY = 'hidden'; // Hide scrollbar if not needed
+            }
         }
 
 
@@ -492,9 +557,12 @@
             console.log(`[${level}] ${message}`); // Also log to console
             const logEntry = document.createElement('div');
             logEntry.classList.add('log-entry');
-            logEntry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}] [${level}]</strong> ${message}`;
+            logEntry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}] [${level}]</strong> ${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}`; // Basic escaping for log
             LOG_AREA.appendChild(logEntry);
-            LOG_AREA.scrollTop = LOG_AREA.scrollHeight; // Scroll log to bottom
+            // Only scroll if the log area is visible
+            if (!LOG_AREA.classList.contains('hidden')) {
+                 LOG_AREA.scrollTop = LOG_AREA.scrollHeight;
+            }
         }
 
         function toggleLog() {
@@ -505,7 +573,7 @@
         // --- File System (Simulated with Local Storage) ---
         function saveFilesToLocalStorage() {
             try {
-                localStorage.setItem('aiCodingAssistantFiles', JSON.stringify(files));
+                localStorage.setItem('aiCodingAssistantFiles_v2', JSON.stringify(files)); // Use a new key if structure changes
                 logMessage('INFO', '文件已保存到 LocalStorage.');
             } catch (error) {
                 logMessage('ERROR', `保存文件到 LocalStorage 失败: ${error}`);
@@ -515,7 +583,7 @@
 
         function loadFilesFromLocalStorage() {
             try {
-                const storedFiles = localStorage.getItem('aiCodingAssistantFiles');
+                const storedFiles = localStorage.getItem('aiCodingAssistantFiles_v2');
                 if (storedFiles) {
                     files = JSON.parse(storedFiles);
                     logMessage('INFO', '已从 LocalStorage 加载文件.');
@@ -546,15 +614,17 @@
 
             sortedFilenames.forEach(filename => {
                 const li = document.createElement('li');
+
                 const fileNameSpan = document.createElement('span');
                 fileNameSpan.textContent = filename;
-                fileNameSpan.style.marginRight = '10px';
+                fileNameSpan.classList.add('file-name'); // Added class
+                fileNameSpan.title = filename; // Tooltip for long names
                 li.appendChild(fileNameSpan);
 
                 const actionsDiv = document.createElement('div');
                 actionsDiv.classList.add('file-actions');
 
-                // View Button (simplified: log content)
+                // View Button
                 const viewButton = document.createElement('button');
                 viewButton.textContent = '👁️';
                 viewButton.title = `查看 ${filename} 内容`;
@@ -575,6 +645,15 @@
                 downloadButton.onclick = () => downloadFile(filename);
                 actionsDiv.appendChild(downloadButton);
 
+                 // Delete Button (New)
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = '🗑️';
+                deleteButton.title = `删除 ${filename}`;
+                deleteButton.classList.add('delete-button'); // Add class for styling
+                deleteButton.onclick = () => confirmDeleteFile(filename);
+                actionsDiv.appendChild(deleteButton);
+
+
                 li.appendChild(actionsDiv);
                 FILE_LIST.appendChild(li);
             });
@@ -584,10 +663,30 @@
          function viewFileContent(filename) {
              if (files.hasOwnProperty(filename)) {
                 const content = files[filename];
-                // Display in a modal or log for simplicity
-                // For this example, let's render it as a system message in chat
                 logMessage('INFO', `查看文件: ${filename}`);
-                const displayContent = `**文件内容: ${filename}**\n\`\`\`\n${content}\n\`\`\``; // Basic markdown for code
+                // Determine language for highlighting (basic check)
+                 const extension = filename.split('.').pop()?.toLowerCase();
+                 let langClass = 'plaintext';
+                 if (extension === 'js' || extension === 'jsx') langClass = 'javascript';
+                 else if (extension === 'py') langClass = 'python';
+                 else if (extension === 'html') langClass = 'html';
+                 else if (extension === 'css') langClass = 'css';
+                 else if (extension === 'json') langClass = 'json';
+                 else if (extension === 'sql') langClass = 'sql';
+                 else if (extension === 'java') langClass = 'java';
+                 else if (extension === 'c' || extension === 'cpp' || extension === 'h') langClass = 'cpp';
+                 else if (extension === 'cs') langClass = 'csharp';
+                 else if (extension === 'php') langClass = 'php';
+                 else if (extension === 'rb') langClass = 'ruby';
+                 else if (extension === 'go') langClass = 'go';
+                 else if (extension === 'rs') langClass = 'rust';
+                 else if (extension === 'sh' || extension === 'bash') langClass = 'bash';
+                 else if (extension === 'md') langClass = 'markdown';
+
+                // Escape HTML content before putting it in backticks for markdown
+                const escapedContent = content.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                // Construct markdown code block
+                const displayContent = `**文件内容: ${filename}**\n\`\`\`${langClass}\n${escapedContent}\n\`\`\``;
                 renderMessage('system', displayContent);
              } else {
                  logMessage('WARN', `尝试查看不存在的文件: ${filename}`);
@@ -600,12 +699,11 @@
                 navigator.clipboard.writeText(files[filename])
                     .then(() => {
                         logMessage('INFO', `已复制文件内容: ${filename}`);
-                        // Optionally show temporary feedback on the button
-                         renderMessage('system', `文件 "${filename}" 的内容已复制到剪贴板。`);
+                         renderSystemMessage(`文件 "${filename}" 的内容已复制到剪贴板。`);
                     })
                     .catch(err => {
                         logMessage('ERROR', `复制文件内容失败 (${filename}): ${err}`);
-                         renderMessage('system', `无法复制文件 "${filename}" 的内容: ${err}`, null, null, 'error-message');
+                         renderSystemMessage(`无法复制文件 "${filename}" 的内容: ${err}`, 'error-message');
                     });
             } else {
                 logMessage('WARN', `尝试复制不存在的文件: ${filename}`);
@@ -615,12 +713,12 @@
         function downloadFile(filename) {
             if (files.hasOwnProperty(filename)) {
                 const content = files[filename];
-                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' }); // Consider dynamic MIME type later
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
                 a.download = filename;
-                document.body.appendChild(a); // Required for Firefox
+                document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
@@ -629,6 +727,75 @@
                  logMessage('WARN', `尝试下载不存在的文件: ${filename}`);
             }
         }
+
+         // --- File Upload Handling (New) ---
+        function handleFileUpload(event) {
+            const uploadedFiles = event.target.files;
+            if (!uploadedFiles || uploadedFiles.length === 0) {
+                return; // No file selected
+            }
+
+            logMessage('INFO', `准备上传 ${uploadedFiles.length} 个文件...`);
+
+            for (const file of uploadedFiles) {
+                const filename = file.name;
+                 let proceed = true;
+
+                 // Check for existing file and confirm overwrite
+                if (files.hasOwnProperty(filename)) {
+                     proceed = confirm(`文件 "${filename}" 已存在。要覆盖它吗？`);
+                 }
+
+                 if (proceed) {
+                    const reader = new FileReader();
+
+                    reader.onload = (e) => {
+                        const content = e.target.result;
+                        files[filename] = content;
+                        saveFilesToLocalStorage();
+                        renderFileList();
+                         logMessage('INFO', `文件 "${filename}" 上传并保存成功。`);
+                         renderSystemMessage(`文件 "${filename}" 已成功上传。`);
+                    };
+
+                    reader.onerror = (e) => {
+                         logMessage('ERROR', `读取上传的文件 "${filename}" 失败: ${e.target.error}`);
+                         renderSystemMessage(`读取上传的文件 "${filename}" 时出错。`, 'error-message');
+                    };
+
+                    reader.readAsText(file); // Read as text, adjust if binary needed
+                 } else {
+                     logMessage('INFO', `跳过上传文件 "${filename}" (用户取消覆盖)。`);
+                 }
+            }
+
+            // Reset the input value to allow uploading the same file again
+            event.target.value = null;
+        }
+
+        // --- File Deletion Handling (New) ---
+         function confirmDeleteFile(filename) {
+             if (confirm(`确定要删除文件 "${filename}" 吗？此操作无法撤销。`)) {
+                 deleteFileInternal(filename);
+             }
+         }
+
+         function deleteFileInternal(filename) {
+             logMessage('INFO', `尝试删除文件: ${filename} (内部调用)`);
+             if (files.hasOwnProperty(filename)) {
+                 delete files[filename];
+                 saveFilesToLocalStorage();
+                 renderFileList();
+                 logMessage('INFO', `文件 "${filename}" 已删除。`);
+                 renderSystemMessage(`文件 "${filename}" 已成功删除。`);
+                 return true; // Indicate success
+             } else {
+                 logMessage('WARN', `尝试删除不存在的文件: ${filename}`);
+                 renderSystemMessage(`无法删除，文件 "${filename}" 不存在。`, 'error-message');
+                 return false; // Indicate failure
+             }
+         }
+
 
         // --- Tool Definitions ---
         const tools = [
@@ -699,8 +866,21 @@
                     description: "列出当前工作区中所有可用的文件名。",
                     parameters: { type: "object", properties: {} } // No parameters needed
                 }
+            },
+            { // New Tool for Deletion
+                type: "function",
+                function: {
+                    name: "deleteFile",
+                    description: "删除指定的文件。如果文件不存在，则返回错误。",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            filename: { type: "string", description: "要删除的文件的名称。" }
+                        },
+                        required: ["filename"]
+                    }
+                }
             }
-            // Potential future tools: deleteFile, createDirectory, listDirectory, searchInFile etc.
         ];
 
         // --- Tool Implementation Mapping ---
@@ -709,6 +889,10 @@
                  logMessage('TOOL_EXEC', `尝试创建文件: ${filename}`);
                  if (!filename || typeof filename !== 'string' || filename.trim() === '') {
                       throw new Error("文件名无效或缺失。");
+                 }
+                 // Basic sanitization (prevent path traversal - less critical for localStorage but good practice)
+                 if (filename.includes('/') || filename.includes('\\') || filename === '.' || filename === '..') {
+                     throw new Error("文件名包含无效字符或路径。");
                  }
                  if (files.hasOwnProperty(filename)) {
                     throw new Error(`文件 "${filename}" 已存在。无法创建。`);
@@ -728,7 +912,8 @@
                     throw new Error(`文件 "${filename}" 不存在。`);
                 }
                  logMessage('TOOL_EXEC', `文件 ${filename} 读取成功.`);
-                return files[filename]; // Return the raw content
+                 // Return raw content; let the caller handle rendering/escaping if needed
+                return files[filename];
             },
              updateFile: ({ filename, content, mode = "overwrite" }) => {
                  logMessage('TOOL_EXEC', `尝试更新文件: ${filename} (模式: ${mode})`);
@@ -739,9 +924,8 @@
                     throw new Error(`文件 "${filename}" 不存在，无法更新。请先创建文件。`);
                  }
                   if (typeof content !== 'string') {
-                     // Allow empty string but not other types
                      if (content === null || content === undefined) {
-                         content = ''; // Treat null/undefined as empty string for update
+                         content = '';
                      } else {
                          throw new Error("要写入的内容必须是文本字符串。");
                      }
@@ -758,13 +942,16 @@
                  }
 
                  saveFilesToLocalStorage();
-                 renderFileList(); // Update UI in case filename changed (though not in this function)
+                 renderFileList();
                  return `文件 "${filename}" 已成功更新 (模式: ${mode})。`;
             },
              renameFile: ({ old_filename, new_filename }) => {
                 logMessage('TOOL_EXEC', `尝试重命名文件: ${old_filename} -> ${new_filename}`);
                  if (!old_filename || typeof old_filename !== 'string' || !new_filename || typeof new_filename !== 'string' || new_filename.trim() === '') {
                      throw new Error("旧文件名或新文件名无效或缺失。");
+                 }
+                  if (new_filename.includes('/') || new_filename.includes('\\') || new_filename === '.' || new_filename === '..') {
+                     throw new Error("新文件名包含无效字符或路径。");
                  }
                  if (!files.hasOwnProperty(old_filename)) {
                      throw new Error(`要重命名的文件 "${old_filename}" 不存在。`);
@@ -776,8 +963,8 @@
                       throw new Error(`旧文件名和新文件名相同 ("${old_filename}")。`);
                  }
 
-                 files[new_filename] = files[old_filename]; // Copy content to new name
-                 delete files[old_filename]; // Delete old entry
+                 files[new_filename] = files[old_filename];
+                 delete files[old_filename];
                  saveFilesToLocalStorage();
                  renderFileList();
                  logMessage('TOOL_EXEC', `文件 ${old_filename} 已成功重命名为 ${new_filename}.`);
@@ -791,10 +978,30 @@
                     return "当前没有文件。";
                 } else {
                     logMessage('TOOL_EXEC', `找到文件: ${fileList.join(', ')}`);
+                    // Provide a clean list for the AI
                     return "当前文件列表:\n" + fileList.join('\n');
                 }
+            },
+            deleteFile: ({ filename }) => { // New Tool Implementation
+                 logMessage('TOOL_EXEC', `尝试删除文件 (AI 调用): ${filename}`);
+                 if (!filename || typeof filename !== 'string') {
+                     throw new Error("文件名无效或缺失。");
+                 }
+                 // Call the internal delete function (which handles checks, logging, UI)
+                 const deleted = deleteFileInternal(filename);
+                 if (deleted) {
+                     return `文件 "${filename}" 已成功删除。`;
+                 } else {
+                     // deleteFileInternal already threw if it didn't exist for user,
+                     // but let's ensure AI gets a clear error if somehow delete fails silently
+                     // (shouldn't happen with current logic, but good practice)
+                     if (!files.hasOwnProperty(filename)) { // Double check
+                          throw new Error(`文件 "${filename}" 不存在。`);
+                     } else {
+                          throw new Error(`删除文件 "${filename}" 时发生未知错误。`); // Fallback error
+                     }
+                 }
             }
-            // Add functions for other tools here
         };
 
         // --- Chat Logic ---
@@ -802,11 +1009,10 @@
             const userInput = USER_INPUT.value.trim();
             if (!userInput) return;
 
-             // Get current settings
             const apiKey = API_KEY_INPUT.value;
             const apiUrl = API_URL_INPUT.value;
             if (!apiKey || !apiUrl) {
-                 renderMessage('system', '错误：请先在设置中填写 API Key 和 API URL。', null, null, 'error-message');
+                 renderSystemMessage('错误：请先在设置中填写 API Key 和 API URL。', 'error-message');
                 return;
             }
 
@@ -814,20 +1020,17 @@
             renderMessage('user', userInput);
             conversationHistory.push({ role: 'user', content: userInput });
 
-            USER_INPUT.value = ''; // Clear input field
-            autoResizeTextarea(); // Reset height after clearing
-            USER_INPUT.focus(); // Keep focus on input
+            USER_INPUT.value = '';
+            autoResizeTextarea();
+            USER_INPUT.focus();
 
-            // Prepare messages for API (limit context)
             const contextMemory = parseInt(CONTEXT_MEMORY_INPUT.value) || 50;
             const messagesToSend = conversationHistory.slice(-contextMemory);
 
-            // Start potential assistant message rendering
-            currentAssistantMessageDiv = renderMessage('assistant', '...', null, null); // Placeholder
-             currentAssistantContent = "";
-             accumulatedToolCalls = [];
+            currentAssistantMessageDiv = renderMessage('assistant', '...', null, null);
+            currentAssistantContent = "";
+            accumulatedToolCalls = [];
 
-            // Make API call
             callAPI(messagesToSend, tools, apiKey, apiUrl);
         }
 
@@ -839,7 +1042,6 @@
                 temperature: parseFloat(TEMPERATURE_INPUT.value) || 0.7,
                 max_tokens: parseInt(MAX_TOKENS_INPUT.value) || 60000,
                 stream: streamEnabled,
-                // Only include tools if there are any defined and the model might use them
                 ...(availableTools && availableTools.length > 0 && { tools: availableTools, tool_choice: "auto" })
              };
 
@@ -856,22 +1058,22 @@
                 });
 
                 if (!response.ok) {
-                     let errorBody = 'Unknown error';
+                     let errorBody = `Status: ${response.status} ${response.statusText}`;
                     try {
-                         errorBody = await response.text(); // Try to get more details
-                    } catch (e) { /* Ignore */ }
-                    throw new Error(`HTTP error! status: ${response.status} ${response.statusText} - ${errorBody}`);
+                         // Try to get text body for more detailed errors (like from Cloudflare Turnstile)
+                         const text = await response.text();
+                         errorBody += ` - ${text.substring(0, 500)}`; // Limit length
+                    } catch (e) { /* Ignore if reading text fails */ }
+                    throw new Error(`HTTP error! ${errorBody}`);
                 }
 
                 if (streamEnabled && response.body) {
                     await processStream(response);
                 } else {
-                     // Handle non-streaming response (less likely based on request but good fallback)
                     const data = await response.json();
                      logMessage('API_RESP', `收到非流式响应: ${JSON.stringify(data)}`);
                     if (data.choices && data.choices[0] && data.choices[0].message) {
-                        const message = data.choices[0].message;
-                        handleAssistantResponse(message); // Process final message
+                        handleAssistantResponse(data.choices[0].message);
                     } else {
                          throw new Error("无效的非流式 API 响应格式");
                     }
@@ -880,18 +1082,16 @@
                  logMessage('ERROR', `API 调用失败 (Retry: ${retryCount}): ${error}`);
                   if (retryCount < MAX_TOOL_RETRY) {
                       logMessage('INFO', `在 ${2**retryCount * 1000}ms 后重试 API 调用...`);
-                      renderSystemMessage(`API 调用失败，正在重试 (${retryCount + 1}/${MAX_TOOL_RETRY})... 错误: ${error.message}`);
-                      await new Promise(resolve => setTimeout(resolve, 2**retryCount * 1000)); // Exponential backoff
-                      // Need to resend the *same* messages that caused the error
+                      renderSystemMessage(`API 调用失败，正在重试 (${retryCount + 1}/${MAX_TOOL_RETRY})... 错误: ${error.message}`, 'error-message');
+                      await new Promise(resolve => setTimeout(resolve, 2**retryCount * 1000));
                       callAPI(messages, availableTools, apiKey, apiUrl, retryCount + 1);
                   } else {
                      renderSystemMessage(`API 调用失败且已达到最大重试次数: ${error.message}`, 'error-message');
-                      // Update the placeholder message with error
                      if (currentAssistantMessageDiv) {
                         currentAssistantMessageDiv.innerHTML = `<strong>助手 (错误)</strong><div class="error-message">API 调用失败: ${error.message}</div>`;
-                        currentAssistantMessageDiv = null; // Stop further updates
+                        currentAssistantMessageDiv = null;
                      }
-                      conversationHistory.push({ role: 'assistant', content: `[API 调用失败: ${error.message}]` }); // Add error marker to history
+                      conversationHistory.push({ role: 'assistant', content: `[API 调用失败: ${error.message}]` });
                   }
              }
         }
@@ -900,7 +1100,7 @@
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
-            let finalAssistantMessage = null; // To store the complete message object
+            let finalAssistantMessage = null;
 
             logMessage('STREAM', '开始处理流式响应...');
 
@@ -912,139 +1112,125 @@
                 }
 
                 buffer += decoder.decode(value, { stream: true });
-                // Process line by line (Server-Sent Events format)
                 const lines = buffer.split('\n');
-                buffer = lines.pop(); // Keep the last (potentially incomplete) line
+                buffer = lines.pop(); // Keep incomplete line
 
                 for (const line of lines) {
+                     if (line.trim() === '') continue; // Skip empty lines
                     if (line.startsWith('data: ')) {
                         const dataContent = line.substring(6).trim();
                         if (dataContent === '[DONE]') {
                              logMessage('STREAM', '收到 [DONE] 信号.');
-                            continue; // End of stream signal
+                            continue;
                         }
                         try {
                             const delta = JSON.parse(dataContent);
-                            if (delta.choices && delta.choices[0] && delta.choices[0].delta) {
-                                const deltaContent = delta.choices[0].delta;
+                            if (delta.choices && delta.choices[0]) {
+                                const choiceDelta = delta.choices[0].delta;
+                                const finishReason = delta.choices[0].finish_reason;
 
                                 // --- Handle Content Delta ---
-                                if (deltaContent.content) {
-                                    currentAssistantContent += deltaContent.content;
+                                if (choiceDelta?.content) {
+                                    currentAssistantContent += choiceDelta.content;
                                      if (currentAssistantMessageDiv) {
-                                        // Update the content, re-parse markdown, re-highlight
-                                        const parsedContent = marked.parse(currentAssistantContent || "...");
-                                        currentAssistantMessageDiv.querySelector('.content').innerHTML = parsedContent;
-                                        // Re-highlight all code blocks within this message
-                                        currentAssistantMessageDiv.querySelectorAll('pre code').forEach((block) => {
-                                             hljs.highlightElement(block);
-                                        });
+                                        const contentDiv = currentAssistantMessageDiv.querySelector('.content');
+                                        if (contentDiv) {
+                                             // Update raw content, let marked parse on finalization or periodic update
+                                             contentDiv.textContent = currentAssistantContent || "..."; // Update text directly first
+                                             // For live markdown/highlighting (can be intensive):
+                                             const parsedContent = marked.parse(currentAssistantContent);
+                                             contentDiv.innerHTML = parsedContent;
+                                             contentDiv.querySelectorAll('pre code:not(.hljs)').forEach((block) => { // Only highlight un-highlighted
+                                                hljs.highlightElement(block);
+                                            });
+                                        }
                                     }
                                 }
 
                                 // --- Handle Tool Call Delta ---
-                                if (deltaContent.tool_calls && deltaContent.tool_calls.length > 0) {
-                                     logMessage('STREAM_TOOL', `收到工具调用 Delta: ${JSON.stringify(deltaContent.tool_calls)}`);
-                                    // The API might send tool calls in chunks. Accumulate them.
-                                    deltaContent.tool_calls.forEach(toolCallDelta => {
-                                         if (toolCallDelta.index === undefined) return; // Invalid chunk
+                                if (choiceDelta?.tool_calls && choiceDelta.tool_calls.length > 0) {
+                                     logMessage('STREAM_TOOL', `收到工具调用 Delta: ${JSON.stringify(choiceDelta.tool_calls)}`);
+                                    choiceDelta.tool_calls.forEach(toolCallDelta => {
+                                         if (toolCallDelta.index === undefined) return;
 
-                                        // Initialize if it's the first chunk for this index
                                         if (!accumulatedToolCalls[toolCallDelta.index]) {
                                              accumulatedToolCalls[toolCallDelta.index] = {
-                                                 id: null,
-                                                 type: 'function', // Assuming only function type for now
-                                                 function: { name: null, arguments: '' } // Start with empty args string
+                                                 id: null, type: 'function', function: { name: null, arguments: '' }
                                              };
-                                             // Display "attempting to use tool" message immediately
-                                             renderMessage('system', `AI 正在尝试使用工具... (ID: ${toolCallDelta.id || '未知'})`, null, null, 'tool-call-message');
+                                              if (currentAssistantMessageDiv?.querySelector('.content')) {
+                                                 currentAssistantMessageDiv.querySelector('.content').textContent = "[请求使用工具...]"; // Update placeholder text
+                                             }
+                                             renderSystemMessage(`AI 正在准备使用工具 (ID: ${toolCallDelta.id || '未知'})...`, null, null, 'tool-call-message');
                                         }
-
                                         const currentTool = accumulatedToolCalls[toolCallDelta.index];
-
-                                        // Update ID if present
-                                         if (toolCallDelta.id) {
-                                            currentTool.id = toolCallDelta.id;
-                                        }
-                                        // Update function name if present
-                                         if (toolCallDelta.function && toolCallDelta.function.name) {
-                                             currentTool.function.name = toolCallDelta.function.name;
-                                         }
-                                        // Append argument chunks
-                                        if (toolCallDelta.function && toolCallDelta.function.arguments) {
-                                            currentTool.function.arguments += toolCallDelta.function.arguments;
-                                        }
+                                         if (toolCallDelta.id) currentTool.id = toolCallDelta.id;
+                                         if (toolCallDelta.function?.name) currentTool.function.name = toolCallDelta.function.name;
+                                         if (toolCallDelta.function?.arguments) currentTool.function.arguments += toolCallDelta.function.arguments;
                                     });
                                 }
 
                                 // --- Handle Finish Reason ---
-                                if (delta.choices[0].finish_reason) {
-                                    const reason = delta.choices[0].finish_reason;
-                                    logMessage('STREAM', `完成原因: ${reason}`);
+                                if (finishReason) {
+                                    logMessage('STREAM', `完成原因: ${finishReason}`);
+                                     // Reconstruct the final message structure for history
+                                     finalAssistantMessage = {
+                                         role: 'assistant',
+                                         content: currentAssistantContent || null,
+                                         tool_calls: accumulatedToolCalls.length > 0 ? accumulatedToolCalls : undefined
+                                     };
 
-                                     // Store the complete assistant message object from the *last* delta
-                                    // This structure is needed for the conversation history
-                                     if (delta.choices[0].message) {
-                                        finalAssistantMessage = delta.choices[0].message;
-                                     } else {
-                                         // Reconstruct if not provided directly in the last delta
-                                         finalAssistantMessage = {
-                                             role: 'assistant',
-                                             content: currentAssistantContent,
-                                             tool_calls: accumulatedToolCalls.length > 0 ? accumulatedToolCalls : undefined
-                                         };
-                                     }
-
-
-                                    if (reason === 'stop') {
+                                    if (finishReason === 'stop') {
                                          handleAssistantResponse(finalAssistantMessage);
-                                    } else if (reason === 'tool_calls') {
-                                         // Ensure all argument strings are fully received before executing
+                                    } else if (finishReason === 'tool_calls') {
                                         logMessage('STREAM_TOOL', `准备执行工具调用: ${JSON.stringify(accumulatedToolCalls)}`);
-                                        handleAssistantResponse(finalAssistantMessage); // Add assistant's tool request to history
-                                        await executeToolCalls(accumulatedToolCalls);
-                                    } else if (reason === 'length') {
+                                        handleAssistantResponse(finalAssistantMessage); // Add assistant's request to history
+                                        // Make sure arguments are fully formed before executing
+                                        // Basic check: look for signs of truncation (can be improved)
+                                        let argsComplete = accumulatedToolCalls.every(tc => {
+                                            try { JSON.parse(tc.function.arguments || '{}'); return true; } catch { return false; }
+                                        });
+                                        if (argsComplete) {
+                                             await executeToolCalls(accumulatedToolCalls);
+                                        } else {
+                                             logMessage('ERROR', '工具调用参数似乎不完整或 JSON 无效，无法执行。');
+                                              renderSystemMessage('错误：AI 返回的工具调用参数似乎不完整或无效，无法执行。', 'error-message');
+                                              // Add error marker to history? Or let AI potentially retry? For now, just show error.
+                                        }
+                                    } else if (finishReason === 'length') {
                                         logMessage('WARN', '响应因达到 max_tokens 而被截断.');
                                         renderSystemMessage('警告：AI 的回复可能因为达到最大长度而被截断。', 'system-message');
-                                        handleAssistantResponse(finalAssistantMessage); // Still add what we got
+                                        handleAssistantResponse(finalAssistantMessage);
                                     } else {
-                                         logMessage('WARN', `未处理的完成原因: ${reason}`);
-                                         handleAssistantResponse(finalAssistantMessage); // Add whatever we got
+                                         logMessage('WARN', `未处理的完成原因: ${finishReason}`);
+                                         handleAssistantResponse(finalAssistantMessage);
                                     }
-                                     // Reset for next message
                                     currentAssistantMessageDiv = null;
                                     currentAssistantContent = "";
                                     accumulatedToolCalls = [];
+                                    finalAssistantMessage = null; // Reset after handling
                                 }
                             }
                          } catch (error) {
                             logMessage('ERROR', `解析流数据失败: ${error} - Data: "${dataContent}"`);
-                            // Don't stop the stream, try to continue
                          }
+                    } else {
+                         // Handle lines that don't start with 'data: ' (e.g., comments, empty lines)
+                         logMessage('STREAM_DEBUG', `跳过非数据行: "${line}"`);
                     }
                 }
             }
-            // Handle any remaining buffer content if needed (usually empty)
-             if (buffer.trim()) {
-                 logMessage('WARN', `流结束后缓冲区仍有内容: "${buffer}"`);
-             }
 
-             // If the stream ended without a finish_reason (unlikely but possible)
+             // Handle case where stream ends without a finish_reason signal
              if (currentAssistantMessageDiv && !finalAssistantMessage) {
-                 logMessage('WARN', '流结束但未收到完成原因或最终消息结构.');
-                  const reconstructedMessage = {
-                     role: 'assistant',
-                     content: currentAssistantContent,
-                     // We don't know if tool calls were intended here, err on the side of caution
-                 };
+                 logMessage('WARN', '流结束但未收到完成原因。将处理当前累积的内容。');
+                  const reconstructedMessage = { role: 'assistant', content: currentAssistantContent };
                  handleAssistantResponse(reconstructedMessage);
-                  currentAssistantMessageDiv = null; // Clear the placeholder/updater
+                  currentAssistantMessageDiv = null;
                   currentAssistantContent = "";
                  accumulatedToolCalls = [];
              }
         }
 
-        // Handles adding the complete assistant message (text or tool call request) to history
         function handleAssistantResponse(message) {
             if (!message) {
                  logMessage('WARN', 'handleAssistantResponse 收到空消息');
@@ -1053,54 +1239,63 @@
 
             logMessage('ASSISTANT', `处理最终助手响应: ${JSON.stringify(message)}`);
 
-            // Update the final display of the assistant message if it was being streamed
-             if (currentAssistantMessageDiv) {
+             // Final update to the message div if it exists
+            if (currentAssistantMessageDiv) {
                  const finalContent = message.content || (message.tool_calls ? "[请求使用工具]" : "[空响应]");
-                 const parsedContent = marked.parse(finalContent);
-                 currentAssistantMessageDiv.querySelector('.content').innerHTML = parsedContent;
-                 currentAssistantMessageDiv.querySelectorAll('pre code').forEach((block) => {
-                     hljs.highlightElement(block);
-                 });
+                 const contentDiv = currentAssistantMessageDiv.querySelector('.content');
+                 if (contentDiv) {
+                     try {
+                         const parsedContent = marked.parse(finalContent);
+                         contentDiv.innerHTML = parsedContent;
+                         contentDiv.querySelectorAll('pre code').forEach((block) => {
+                             if (!block.classList.contains('hljs')) { // Check if already highlighted
+                                 hljs.highlightElement(block);
+                             }
+                         });
+                     } catch (e) {
+                         logMessage('ERROR', `最终 Markdown/Highlight 渲染失败: ${e}`);
+                         contentDiv.innerHTML = `<pre>${finalContent.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`; // Fallback to preformatted text
+                     }
+                 }
                  currentAssistantMessageDiv = null; // Mark as finalized
-             } else if (!message.tool_calls) {
-                 // If not streamed (e.g., non-stream response or error fallback), render it now
+            } else if (!message.tool_calls) {
+                 // If not streamed, render it now (should have content)
                  renderMessage('assistant', message.content || "[空响应]");
              }
 
-             // Add the *structured* message to history
-             // Important: Store the tool_calls array if present, even if content is null/empty
+
+             // Add the structured message to history
              const historyEntry = {
                 role: 'assistant',
-                content: message.content || null, // OpenAI standard often uses null content when tool_calls are present
-                 ...(message.tool_calls && { tool_calls: message.tool_calls }) // Conditionally add tool_calls
+                content: message.content || null,
+                 ...(message.tool_calls && { tool_calls: message.tool_calls })
              };
-             conversationHistory.push(historyEntry);
-
-             logMessage('HISTORY', `助手消息已添加到历史: ${JSON.stringify(historyEntry)}`);
+             // Avoid adding empty messages unless they contain tool calls
+             if (historyEntry.content || historyEntry.tool_calls) {
+                 conversationHistory.push(historyEntry);
+                 logMessage('HISTORY', `助手消息已添加到历史: ${JSON.stringify(historyEntry)}`);
+             } else {
+                 logMessage('HISTORY', '跳过添加空的助手消息到历史记录。');
+             }
         }
-
 
         async function executeToolCalls(toolCalls) {
             if (!toolCalls || toolCalls.length === 0) {
-                logMessage('WARN', 'executeToolCalls 被调用但没有工具调用需要执行。');
+                logMessage('WARN', 'executeToolCalls called with no tool calls.');
                 return;
             }
 
-            const toolResults = []; // Results to send back to the AI
+            const toolResults = [];
 
             for (const toolCall of toolCalls) {
-                if (!toolCall || !toolCall.function || !toolCall.id) {
+                if (!toolCall?.function || !toolCall.id) {
                      logMessage('ERROR', `无效的工具调用结构: ${JSON.stringify(toolCall)}`);
-                     // Provide an error result back to the AI for this specific broken call
-                     if (toolCall && toolCall.id) {
+                     if (toolCall?.id) {
                          toolResults.push({
-                             tool_call_id: toolCall.id,
-                             role: "tool",
-                             name: toolCall.function?.name || "unknown_function",
-                             content: `[工具执行错误：内部错误 - 无效的工具调用结构]`,
-                         });
+                             tool_call_id: toolCall.id, role: "tool", name: toolCall.function?.name || "unknown_function",
+                             content: `[工具执行错误：内部错误 - 无效的工具调用结构]` });
                      }
-                    continue; // Skip to the next tool call
+                    continue;
                 }
 
                 const functionName = toolCall.function.name;
@@ -1110,41 +1305,49 @@
                 let errorOccurred = false;
                 let attempt = 0;
 
-                 // Display execution attempt
-                 const execMsg = renderMessage('system', `执行工具: ${functionName} (ID: ${toolCallId})...`, null, toolCallId, 'tool-call-message');
-
+                const execMsg = renderMessage('system', `执行工具: ${functionName} (ID: ${toolCallId})...`, null, toolCallId, 'tool-call-message');
 
                 while (attempt <= MAX_TOOL_RETRY) {
                      errorOccurred = false;
                     try {
                          logMessage('TOOL_EXEC', `尝试执行工具: ${functionName}, ID: ${toolCallId}, 尝试次数: ${attempt + 1}`);
-                        args = JSON.parse(toolCall.function.arguments || '{}');
-                         logMessage('TOOL_EXEC', `参数: ${JSON.stringify(args)}`);
+                        // Defensive parsing: handle potential empty string or non-JSON argument string
+                        const argsString = toolCall.function.arguments?.trim();
+                        if (!argsString) {
+                             args = {}; // Treat empty args string as empty object
+                             logMessage('TOOL_EXEC', `参数为空，使用 {}`);
+                        } else {
+                             try {
+                                 args = JSON.parse(argsString);
+                                 logMessage('TOOL_EXEC', `参数: ${JSON.stringify(args)}`);
+                             } catch (parseError) {
+                                 // Throw specific error if JSON parsing fails
+                                 throw new Error(`参数 JSON 解析失败: ${parseError.message}. 参数内容: "${argsString}"`);
+                             }
+                        }
+
 
                         if (toolFunctions[functionName]) {
-                            // Execute the corresponding JS function
-                            result = await toolFunctions[functionName](args); // Use await in case tool function becomes async
+                            result = await toolFunctions[functionName](args);
                             logMessage('TOOL_RESULT', `工具 ${functionName} (ID: ${toolCallId}) 成功执行. 结果类型: ${typeof result}`);
-                            break; // Success, exit retry loop
+                            break;
                         } else {
                             throw new Error(`未知的工具函数: ${functionName}`);
                         }
                     } catch (error) {
                          errorOccurred = true;
                         logMessage('ERROR', `工具执行失败: ${functionName} (ID: ${toolCallId}), 尝试次数: ${attempt + 1}. 错误: ${error}`);
-                         result = `[工具执行错误: ${error.message}]`; // Format error for AI
+                         result = `[工具执行错误: ${error.message}]`;
 
-                        if (error instanceof SyntaxError) {
-                             // JSON parsing error - unlikely AI will fix this by itself, don't retry parse errors
-                            logMessage('ERROR', '参数 JSON 解析错误，不重试。');
+                        if (error.message.includes("JSON 解析失败")) {
+                             logMessage('ERROR', '参数 JSON 解析错误，不重试。');
                              attempt = MAX_TOOL_RETRY + 1; // Force exit loop
                         } else {
                             attempt++;
                             if (attempt <= MAX_TOOL_RETRY) {
                                 logMessage('INFO', `在 ${attempt * 500}ms 后重试工具执行...`);
-                                 // Update execution message
-                                 execMsg.innerHTML = `<strong>系统 (重试 ${attempt})</strong> 执行工具: ${functionName} (ID: ${toolCallId}) 失败，正在重试... 错误: ${error.message}`;
-                                await new Promise(resolve => setTimeout(resolve, attempt * 500)); // Simple linear backoff for tool retry
+                                if(execMsg) execMsg.innerHTML = `<strong>系统 (重试 ${attempt})</strong> 执行工具: ${functionName} (ID: ${toolCallId}) 失败，正在重试... <div style="font-size: 0.9em; color: var(--danger-color);">错误: ${error.message}</div>`;
+                                await new Promise(resolve => setTimeout(resolve, attempt * 500));
                             } else {
                                 logMessage('ERROR', `工具 ${functionName} (ID: ${toolCallId}) 达到最大重试次数.`);
                             }
@@ -1152,12 +1355,32 @@
                     }
                 } // End retry loop
 
-
-                // Display final result (success or final error)
-                const resultMessageClass = errorOccurred ? 'error-message' : 'tool-result-message';
-                 // Update or replace the execution message
-                 execMsg.className = `message ${resultMessageClass}`; // Change background
-                 execMsg.innerHTML = `<strong>工具结果 (${functionName} / ${toolCallId})</strong><div>${typeof result === 'string' ? result : JSON.stringify(result)}</div>`;
+                // Display final result
+                 const resultMessageClass = errorOccurred ? 'error-message' : 'tool-result-message';
+                 if (execMsg) { // Ensure execMsg still exists
+                     execMsg.className = `message ${resultMessageClass}`;
+                     // Render result carefully - escape if it's just a string, stringify otherwise
+                     let resultDisplay = '';
+                     if (typeof result === 'string') {
+                          // If it's an error message, display as is. Otherwise, maybe wrap in pre?
+                          if (result.startsWith('[工具执行错误')) {
+                              resultDisplay = result;
+                          } else {
+                               // Simple heuristic: if it contains newlines or is long, use pre
+                               if (result.includes('\n') || result.length > 100) {
+                                   resultDisplay = `<pre>${result.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`;
+                               } else {
+                                   resultDisplay = result.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                               }
+                          }
+                     } else {
+                         resultDisplay = JSON.stringify(result); // Stringify non-string results
+                     }
+                      execMsg.innerHTML = `<strong>工具结果 (${functionName} / ${toolCallId})</strong><div>${resultDisplay}</div>`;
+                 } else {
+                     // If the original execMsg was lost somehow, render a new one
+                     renderMessage('system', `工具结果 (${functionName} / ${toolCallId}): ${JSON.stringify(result)}`, null, toolCallId, resultMessageClass);
+                 }
 
 
                 // Prepare result for the next API call
@@ -1169,23 +1392,22 @@
                  });
             } // End loop through toolCalls
 
-            // Add all tool results to conversation history
+            // Add tool results to history
             toolResults.forEach(res => conversationHistory.push(res));
              logMessage('HISTORY', `工具结果已添加到历史: ${JSON.stringify(toolResults)}`);
 
-             // Make a follow-up API call with the tool results
+             // Make follow-up API call
              logMessage('API_CALL', '发起包含工具结果的后续 API 调用...');
              const contextMemory = parseInt(CONTEXT_MEMORY_INPUT.value) || 50;
-             const messagesToSend = conversationHistory.slice(-contextMemory); // Get latest including tool results
+             const messagesToSend = conversationHistory.slice(-contextMemory);
 
-             // Start new assistant message placeholder
              currentAssistantMessageDiv = renderMessage('assistant', '...', null, null);
              currentAssistantContent = "";
-             accumulatedToolCalls = []; // Reset tool calls for the *next* response
+             accumulatedToolCalls = [];
 
              const apiKey = API_KEY_INPUT.value;
              const apiUrl = API_URL_INPUT.value;
-             callAPI(messagesToSend, tools, apiKey, apiUrl); // Call API again with results
+             callAPI(messagesToSend, tools, apiKey, apiUrl);
         }
 
         // --- Rendering ---
@@ -1193,53 +1415,38 @@
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message');
             let roleDisplay = role;
-            let contentToRender = content || ""; // Ensure content is never null/undefined for rendering
+            let contentToRender = content || ""; // Ensure valid string
 
             switch (role) {
-                case 'user':
-                    messageDiv.classList.add('user-message');
-                    roleDisplay = '你';
+                case 'user': messageDiv.classList.add('user-message'); roleDisplay = '你'; break;
+                case 'assistant': messageDiv.classList.add('assistant-message'); roleDisplay = '助手';
+                     if (toolCalls && toolCalls.length > 0 && !contentToRender) { contentToRender = `[请求使用 ${toolCalls.length} 个工具...]`; }
+                     if (!contentToRender && !toolCalls) contentToRender = '...'; // Show thinking indicator if empty
                     break;
-                case 'assistant':
-                    messageDiv.classList.add('assistant-message');
-                     roleDisplay = '助手';
-                    // If assistant is requesting tools, show that instead of potentially null content
-                     if (toolCalls && toolCalls.length > 0 && !contentToRender) {
-                         contentToRender = `[正在请求使用 ${toolCalls.length} 个工具...]`;
-                     }
-                    break;
-                 case 'tool': // Displaying tool *results*
-                    messageDiv.classList.add('tool-result-message');
-                     // We need the function name which isn't directly in the 'tool' role message
-                     // Let's rely on the caller (executeToolCalls) to format the content better
-                     roleDisplay = `工具结果`; // Simplified display
-                    break;
-                case 'system': // For system info, errors, tool call attempts etc.
-                     messageDiv.classList.add('system-message');
-                     roleDisplay = '系统';
-                    break;
-                default:
-                    messageDiv.classList.add('system-message'); // Fallback style
+                 case 'tool': messageDiv.classList.add('tool-result-message'); roleDisplay = `工具结果`; break; // Caller should provide formatted content
+                case 'system': messageDiv.classList.add('system-message'); roleDisplay = '系统'; break;
+                default: messageDiv.classList.add('system-message');
             }
-
-            if (extraClass) {
-                messageDiv.classList.add(extraClass); // Add specific classes like 'tool-call-message', 'error-message'
-                 // Adjust role display based on extra class if needed
+             if (extraClass) {
+                 messageDiv.classList.add(extraClass);
                  if (extraClass === 'tool-call-message') roleDisplay = '系统 (工具调用)';
                  if (extraClass === 'error-message') roleDisplay = '系统 (错误)';
+                 if (extraClass === 'tool-result-message') { /* Already handled by role='tool' */ }
+                 else { messageDiv.classList.replace('system-message', extraClass); } // Replace default system if specific error/tool class provided
             }
 
-
-             // Use marked to parse Markdown content
-            // Handle potential errors during parsing, though marked is generally robust
             let parsedContent;
              try {
-                 parsedContent = marked.parse(contentToRender);
+                 // Use textContent for initial placeholder to avoid parsing '...' as markdown
+                 if (contentToRender === '...' || contentToRender.startsWith('[请求使用')) {
+                      parsedContent = contentToRender;
+                 } else {
+                     parsedContent = marked.parse(contentToRender);
+                 }
              } catch (e) {
                  logMessage('ERROR', `Markdown 解析失败: ${e}`);
-                 parsedContent = `<pre>Markdown 解析错误:\n${contentToRender}</pre>`; // Show raw content on error
+                 parsedContent = `<pre>${contentToRender.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`;
              }
-
 
             messageDiv.innerHTML = `
                 <strong>${roleDisplay}${toolCallId ? ` (ID: ${toolCallId})` : ''}</strong>
@@ -1247,24 +1454,22 @@
             `;
             CHAT_LOG.appendChild(messageDiv);
 
-            // Apply highlighting to any new code blocks added by marked
-            messageDiv.querySelectorAll('pre code').forEach((block) => {
-                try {
-                     hljs.highlightElement(block);
-                } catch (e) {
-                     logMessage('ERROR', `代码高亮失败: ${e}`);
-                }
-            });
+             // Apply highlighting if not just a placeholder
+             if (contentToRender !== '...' && !contentToRender.startsWith('[请求使用')) {
+                 messageDiv.querySelectorAll('pre code').forEach((block) => {
+                    try { hljs.highlightElement(block); } catch (e) { logMessage('ERROR', `代码高亮失败: ${e}`); }
+                 });
+             }
 
-
-            // Scroll to the bottom
             CHAT_LOG.scrollTop = CHAT_LOG.scrollHeight;
-
-            return messageDiv; // Return the created element, useful for streaming updates
+            return messageDiv;
         }
 
          function renderSystemMessage(message, typeClass = 'system-message') {
-             logMessage('SYSTEM', message);
+             // Avoid logging system messages that are just confirmations of user actions
+             if (!message.includes("已成功上传") && !message.includes("已成功删除") && !message.includes("已复制到剪贴板")) {
+                 logMessage('SYSTEM', message);
+             }
              renderMessage('system', message, null, null, typeClass);
          }
 
@@ -1272,11 +1477,9 @@
         function clearConversation() {
             logMessage('INFO', '清空对话历史.');
             conversationHistory = [];
-            CHAT_LOG.innerHTML = ''; // Clear visual chat log
-            // Add initial system message back?
+            CHAT_LOG.innerHTML = '';
              renderMessage('system', '对话已清空。你好！有什么可以帮你的吗？');
-             // Files (`files` object and localStorage) are intentionally NOT cleared here
-             // renderFileList(); // Refresh just in case (though should be static)
+            // Files are NOT cleared
         }
 
     </script>
