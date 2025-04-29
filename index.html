@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 编程助手</title>
+    <!-- Marked.js for Markdown Parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Highlight.js for Code Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Optional: Add specific language support for highlight.js if needed -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script> -->
+
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --container-bg: #ffffff;
+            --border-color: #dee2e6;
+            --text-color: #212529;
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --user-msg-bg: #e7f5ff;
+            --assistant-msg-bg: #f1f3f5;
+            --tool-call-bg: #fff9db;
+            --tool-result-bg: #e4fcef;
+            --system-msg-bg: #ffe8cc;
+            --error-msg-bg: #fdeeee;
+            --code-bg: #e9ecef;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh; /* Full viewport height */
+            background-color: var(--container-bg);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 1600px; /* Limit max width */
+            margin: 0 auto; /* Center container */
+        }
+
+        /* --- File Explorer --- */
+        .file-explorer {
+            width: 250px;
+            border-right: 1px solid var(--border-color);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background-color: #fdfdff; /* Slightly different shade */
+        }
+
+        .file-explorer h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        #file-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        #file-list li {
+            padding: 8px 5px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9em;
+            word-break: break-all; /* Prevent long names from overflowing */
+        }
+
+         #file-list li:hover {
+            background-color: #f1f3f5;
+         }
+
+        .file-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-left: 5px;
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: var(--secondary-color);
+        }
+        .file-actions button:hover {
+            background-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+
+        /* --- Main Content (Chat + Input) --- */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%; /* Ensure it takes full height */
+        }
+
+        /* --- Chat Interface --- */
+        .chat-interface {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto; /* Enable scrolling for messages */
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            max-width: 90%;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background-color: var(--user-msg-bg);
+            margin-left: auto; /* Align to right */
+            border: 1px solid #bde0ff;
+        }
+
+        .assistant-message {
+            background-color: var(--assistant-msg-bg);
+            margin-right: auto; /* Align to left */
+            border: 1px solid #e0e0e0;
+        }
+
+        .system-message, .log-entry {
+            background-color: var(--system-msg-bg);
+            border: 1px solid #ffdcb0;
+            font-style: italic;
+            font-size: 0.9em;
+            color: #664d03;
+            margin-right: auto;
+            padding: 8px 12px;
+        }
+        .log-entry {
+             margin-bottom: 5px;
+        }
+
+        .tool-call-message {
+            background-color: var(--tool-call-bg);
+            border: 1px solid #ffecb3;
+            margin-right: auto;
+            font-style: italic;
+             font-size: 0.9em;
+             color: #665d1e;
+             padding: 8px 12px;
+        }
+
+        .tool-result-message {
+            background-color: var(--tool-result-bg);
+            border: 1px solid #c3e6cb;
+            margin-right: auto;
+            font-style: italic;
+            font-size: 0.9em;
+            color: #0f5132;
+             padding: 8px 12px;
+        }
+         .error-message {
+            background-color: var(--error-msg-bg);
+            border: 1px solid #f5c2c7;
+            color: #842029;
+             margin-right: auto;
+             font-style: italic;
+             font-size: 0.9em;
+             padding: 8px 12px;
+         }
+
+
+        .message strong { /* Role indicator */
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.8em;
+            color: var(--secondary-color);
+            text-transform: uppercase;
+        }
+
+        /* Code Blocks */
+        .message pre {
+            background-color: var(--code-bg);
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #ced4da;
+        }
+
+        .message code:not(pre code) { /* Inline code */
+            background-color: var(--code-bg);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        /* --- Input Area --- */
+        .input-area {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid var(--border-color); /* Add border */
+            background-color: #f8f9fa; /* Slightly different background */
+            align-items: flex-end; /* Align items to bottom */
+        }
+
+        #user-input {
+            flex-grow: 1;
+            min-height: 40px; /* Minimum height */
+            max-height: 200px; /* Maximum height before scrolling */
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            margin-right: 10px;
+            resize: vertical; /* Allow vertical resize */
+            font-size: 1rem;
+             line-height: 1.5;
+        }
+
+        #user-input:focus {
+             outline: none;
+             border-color: var(--primary-color);
+             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+
+        .input-area button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: 5px;
+            height: 44px; /* Match default input height */
+        }
+
+        .input-area button:hover {
+            background-color: #0056b3;
+        }
+
+         #clear-button {
+            background-color: var(--secondary-color);
+         }
+         #clear-button:hover {
+            background-color: #5a6268;
+         }
+
+
+        /* --- Settings/Log Panel --- */
+        .settings-log-panel {
+            width: 300px;
+            border-left: 1px solid var(--border-color);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            background-color: #fdfdff;
+        }
+
+        .settings-log-panel h2 {
+             margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+         .settings-section, .log-section {
+             margin-bottom: 20px;
+         }
+
+         .settings-section label {
+             display: block;
+             margin-bottom: 5px;
+             font-weight: bold;
+             font-size: 0.9em;
+         }
+         .settings-section input, .settings-section select {
+             width: 100%;
+             padding: 8px;
+             margin-bottom: 10px;
+             border: 1px solid var(--border-color);
+             border-radius: 4px;
+             box-sizing: border-box; /* Include padding in width */
+             font-size: 0.9em;
+         }
+
+
+        #log-toggle-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            text-align: left;
+            padding: 5px 0;
+            font-weight: bold;
+            color: var(--primary-color);
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+         #log-toggle-button:hover {
+             text-decoration: underline;
+         }
+
+        #log-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            font-size: 0.85em;
+            line-height: 1.4;
+            border-radius: 4px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Scrollbar styling (optional, webkit browsers) */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- File Explorer -->
+        <div class="file-explorer">
+            <h2>文件列表</h2>
+            <ul id="file-list">
+                <!-- File items will be generated by JS -->
+            </ul>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <div class="chat-interface" id="chat-log">
+                <!-- Chat messages will appear here -->
+                 <div class="message system-message">
+                    <strong>系统</strong>
+                    你好！我是你的 AI 编程助手。告诉我你的需求，例如“创建一个名为 hello.py 的 Python 文件，并写入打印 'Hello, World!' 的代码”。
+                </div>
+            </div>
+            <div class="input-area">
+                <textarea id="user-input" placeholder="输入你的需求或代码..." rows="1"></textarea>
+                <button id="send-button">发送</button>
+                <button id="clear-button">清空对话</button>
+            </div>
+        </div>
+
+        <!-- Settings & Log Panel -->
+        <div class="settings-log-panel">
+             <div class="settings-section">
+                 <h2>设置</h2>
+                 <label for="api-key">API Key:</label>
+                 <input type="password" id="api-key" value="sk-CFUVuYj0pFTvY4X076Eos6FYkkt2PxBjNnnb3tAqEZx9opCU">
+
+                 <label for="api-url">API URL:</label>
+                 <input type="text" id="api-url" value="https://ent.zetatechs.com/v1/chat/completions">
+
+                 <label for="model">模型:</label>
+                 <select id="model">
+                    <option value="gemini-2.5-flash-preview-04-17-thinking" selected>gemini-2.5-flash-preview-04-17-thinking</option>
+                    <!-- Add other models if available -->
+                 </select>
+
+                 <label for="temperature">Temperature (0-1):</label>
+                 <input type="number" id="temperature" value="0.7" min="0" max="1" step="0.1">
+
+                 <label for="max-tokens">Max Tokens:</label>
+                 <input type="number" id="max-tokens" value="60000" min="1">
+
+                 <label for="context-memory">Context Memory (Messages):</label>
+                 <input type="number" id="context-memory" value="50" min="1">
+
+                  <label for="stream-response">
+                    <input type="checkbox" id="stream-response" checked> 开启流式回复
+                  </label>
+             </div>
+
+            <div class="log-section">
+                <button id="log-toggle-button">显示/隐藏 日志 ▼</button>
+                 <div id="log-area" class="hidden">
+                    <!-- Log messages will appear here -->
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants and Configuration ---
+        const API_URL_INPUT = document.getElementById('api-url');
+        const API_KEY_INPUT = document.getElementById('api-key');
+        const MODEL_SELECT = document.getElementById('model');
+        const TEMPERATURE_INPUT = document.getElementById('temperature');
+        const MAX_TOKENS_INPUT = document.getElementById('max-tokens');
+        const CONTEXT_MEMORY_INPUT = document.getElementById('context-memory');
+        const STREAM_CHECKBOX = document.getElementById('stream-response');
+
+        const CHAT_LOG = document.getElementById('chat-log');
+        const USER_INPUT = document.getElementById('user-input');
+        const SEND_BUTTON = document.getElementById('send-button');
+        const CLEAR_BUTTON = document.getElementById('clear-button');
+        const FILE_LIST = document.getElementById('file-list');
+        const LOG_AREA = document.getElementById('log-area');
+        const LOG_TOGGLE_BUTTON = document.getElementById('log-toggle-button');
+
+        const MAX_TOOL_RETRY = 2; // Max retries for tool execution failure
+
+        let conversationHistory = []; // Stores { role: 'user' | 'assistant' | 'tool', content: string, tool_calls?: [], tool_call_id?: string }
+        let files = {}; // In-memory file system simulation: { 'filename.ext': 'content' }
+        let currentAssistantMessageDiv = null; // For streaming updates
+        let currentAssistantContent = ""; // Accumulate streaming content
+        let accumulatedToolCalls = []; // Accumulate tool calls from stream
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Configure Marked
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                },
+                langPrefix: 'hljs language-', // prefix for Go links and code blocks
+                gfm: true, // Enable GitHub Flavored Markdown
+                breaks: true, // Convert GFM line breaks to <br>
+            });
+
+            // Initial highlight.js setup
+            // hljs.configure({ useBR: true }); // Optional: use <br> instead of \n in code blocks
+
+            loadFilesFromLocalStorage();
+            renderFileList();
+
+            SEND_BUTTON.addEventListener('click', sendMessage);
+            USER_INPUT.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault(); // Prevent default Enter behavior (new line)
+                    sendMessage();
+                }
+            });
+             USER_INPUT.addEventListener('input', autoResizeTextarea);
+
+            CLEAR_BUTTON.addEventListener('click', clearConversation);
+            LOG_TOGGLE_BUTTON.addEventListener('click', toggleLog);
+
+            // Initial resize
+            autoResizeTextarea();
+             logMessage('INFO', 'AI 编程助手已初始化.');
+        });
+
+         function autoResizeTextarea() {
+            USER_INPUT.style.height = 'auto'; // Temporarily shrink
+            USER_INPUT.style.height = USER_INPUT.scrollHeight + 'px'; // Set to scroll height
+        }
+
+
+        // --- Logging ---
+        function logMessage(level, message) {
+            console.log(`[${level}] ${message}`); // Also log to console
+            const logEntry = document.createElement('div');
+            logEntry.classList.add('log-entry');
+            logEntry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}] [${level}]</strong> ${message}`;
+            LOG_AREA.appendChild(logEntry);
+            LOG_AREA.scrollTop = LOG_AREA.scrollHeight; // Scroll log to bottom
+        }
+
+        function toggleLog() {
+            const isHidden = LOG_AREA.classList.toggle('hidden');
+             LOG_TOGGLE_BUTTON.textContent = isHidden ? '显示日志 ▼' : '隐藏日志 ▲';
+        }
+
+        // --- File System (Simulated with Local Storage) ---
+        function saveFilesToLocalStorage() {
+            try {
+                localStorage.setItem('aiCodingAssistantFiles', JSON.stringify(files));
+                logMessage('INFO', '文件已保存到 LocalStorage.');
+            } catch (error) {
+                logMessage('ERROR', `保存文件到 LocalStorage 失败: ${error}`);
+                renderMessage('system', `保存文件到 LocalStorage 时出错: ${error}`, null, null, 'error-message');
+            }
+        }
+
+        function loadFilesFromLocalStorage() {
+            try {
+                const storedFiles = localStorage.getItem('aiCodingAssistantFiles');
+                if (storedFiles) {
+                    files = JSON.parse(storedFiles);
+                    logMessage('INFO', '已从 LocalStorage 加载文件.');
+                } else {
+                    files = {}; // Initialize if nothing is stored
+                     logMessage('INFO', 'LocalStorage 中无文件，已初始化空文件列表.');
+                }
+            } catch (error) {
+                logMessage('ERROR', `从 LocalStorage 加载文件失败: ${error}`);
+                 renderMessage('system', `无法从浏览器存储中加载文件，文件列表可能为空或不完整。错误: ${error}`, null, null, 'error-message');
+                files = {}; // Reset files if loading fails
+            }
+        }
+
+        // --- File Explorer UI ---
+        function renderFileList() {
+            FILE_LIST.innerHTML = ''; // Clear existing list
+            const sortedFilenames = Object.keys(files).sort();
+
+            if (sortedFilenames.length === 0) {
+                 const li = document.createElement('li');
+                 li.textContent = '没有文件';
+                 li.style.fontStyle = 'italic';
+                 li.style.color = 'var(--secondary-color)';
+                 FILE_LIST.appendChild(li);
+                return;
+            }
+
+            sortedFilenames.forEach(filename => {
+                const li = document.createElement('li');
+                const fileNameSpan = document.createElement('span');
+                fileNameSpan.textContent = filename;
+                fileNameSpan.style.marginRight = '10px';
+                li.appendChild(fileNameSpan);
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.classList.add('file-actions');
+
+                // View Button (simplified: log content)
+                const viewButton = document.createElement('button');
+                viewButton.textContent = '👁️';
+                viewButton.title = `查看 ${filename} 内容`;
+                viewButton.onclick = () => viewFileContent(filename);
+                actionsDiv.appendChild(viewButton);
+
+                // Copy Button
+                const copyButton = document.createElement('button');
+                copyButton.textContent = '📋';
+                 copyButton.title = `复制 ${filename} 内容`;
+                copyButton.onclick = () => copyFileContent(filename);
+                actionsDiv.appendChild(copyButton);
+
+                // Download Button
+                const downloadButton = document.createElement('button');
+                downloadButton.textContent = '💾';
+                 downloadButton.title = `下载 ${filename}`;
+                downloadButton.onclick = () => downloadFile(filename);
+                actionsDiv.appendChild(downloadButton);
+
+                li.appendChild(actionsDiv);
+                FILE_LIST.appendChild(li);
+            });
+            logMessage('DEBUG', '文件列表已更新.');
+        }
+
+         function viewFileContent(filename) {
+             if (files.hasOwnProperty(filename)) {
+                const content = files[filename];
+                // Display in a modal or log for simplicity
+                // For this example, let's render it as a system message in chat
+                logMessage('INFO', `查看文件: ${filename}`);
+                const displayContent = `**文件内容: ${filename}**\n\`\`\`\n${content}\n\`\`\``; // Basic markdown for code
+                renderMessage('system', displayContent);
+             } else {
+                 logMessage('WARN', `尝试查看不存在的文件: ${filename}`);
+                  renderMessage('system', `文件 "${filename}" 不存在。`, null, null, 'error-message');
+             }
+         }
+
+        function copyFileContent(filename) {
+            if (files.hasOwnProperty(filename)) {
+                navigator.clipboard.writeText(files[filename])
+                    .then(() => {
+                        logMessage('INFO', `已复制文件内容: ${filename}`);
+                        // Optionally show temporary feedback on the button
+                         renderMessage('system', `文件 "${filename}" 的内容已复制到剪贴板。`);
+                    })
+                    .catch(err => {
+                        logMessage('ERROR', `复制文件内容失败 (${filename}): ${err}`);
+                         renderMessage('system', `无法复制文件 "${filename}" 的内容: ${err}`, null, null, 'error-message');
+                    });
+            } else {
+                logMessage('WARN', `尝试复制不存在的文件: ${filename}`);
+            }
+        }
+
+        function downloadFile(filename) {
+            if (files.hasOwnProperty(filename)) {
+                const content = files[filename];
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a); // Required for Firefox
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                logMessage('INFO', `已下载文件: ${filename}`);
+            } else {
+                 logMessage('WARN', `尝试下载不存在的文件: ${filename}`);
+            }
+        }
+
+        // --- Tool Definitions ---
+        const tools = [
+            {
+                type: "function",
+                function: {
+                    name: "createFile",
+                    description: "创建一个新的空文件或带有初始内容的文件。如果文件已存在，将返回错误。",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            filename: { type: "string", description: "要创建的文件的名称，应包含扩展名 (例如 'script.py', 'styles.css')." },
+                            content: { type: "string", description: "（可选）要写入新文件的初始内容。" }
+                        },
+                        required: ["filename"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "readFile",
+                    description: "读取并返回指定文件的全部内容。",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            filename: { type: "string", description: "要读取的文件的名称。" }
+                        },
+                        required: ["filename"]
+                    }
+                }
+            },
+             {
+                type: "function",
+                function: {
+                    name: "updateFile",
+                    description: "修改现有文件的内容。可以选择完全覆盖内容或在末尾追加内容。",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            filename: { type: "string", description: "要更新的文件的名称。" },
+                            content: { type: "string", description: "要写入文件的新内容或要追加的内容。" },
+                             mode: { type: "string", enum: ["overwrite", "append"], description: "更新模式：'overwrite' 完全替换文件内容，'append' 将新内容添加到现有内容的末尾。默认为 'overwrite'。", default: "overwrite" }
+                        },
+                        required: ["filename", "content"]
+                    }
+                }
+            },
+             {
+                type: "function",
+                function: {
+                    name: "renameFile",
+                    description: "重命名一个现有文件。",
+                    parameters: {
+                        type: "object",
+                        properties: {
+                            old_filename: { type: "string", description: "要重命名的当前文件名。" },
+                            new_filename: { type: "string", description: "文件的新名称。" }
+                        },
+                        required: ["old_filename", "new_filename"]
+                    }
+                }
+            },
+            {
+                type: "function",
+                function: {
+                    name: "listFiles",
+                    description: "列出当前工作区中所有可用的文件名。",
+                    parameters: { type: "object", properties: {} } // No parameters needed
+                }
+            }
+            // Potential future tools: deleteFile, createDirectory, listDirectory, searchInFile etc.
+        ];
+
+        // --- Tool Implementation Mapping ---
+        const toolFunctions = {
+            createFile: ({ filename, content = "" }) => {
+                 logMessage('TOOL_EXEC', `尝试创建文件: ${filename}`);
+                 if (!filename || typeof filename !== 'string' || filename.trim() === '') {
+                      throw new Error("文件名无效或缺失。");
+                 }
+                 if (files.hasOwnProperty(filename)) {
+                    throw new Error(`文件 "${filename}" 已存在。无法创建。`);
+                 }
+                 files[filename] = content;
+                 saveFilesToLocalStorage();
+                 renderFileList();
+                 logMessage('TOOL_EXEC', `文件 ${filename} 创建成功.`);
+                 return `文件 "${filename}" 已成功创建${content ? '并写入了初始内容' : ''}。`;
+            },
+            readFile: ({ filename }) => {
+                 logMessage('TOOL_EXEC', `尝试读取文件: ${filename}`);
+                if (!filename || typeof filename !== 'string') {
+                    throw new Error("文件名无效或缺失。");
+                }
+                if (!files.hasOwnProperty(filename)) {
+                    throw new Error(`文件 "${filename}" 不存在。`);
+                }
+                 logMessage('TOOL_EXEC', `文件 ${filename} 读取成功.`);
+                return files[filename]; // Return the raw content
+            },
+             updateFile: ({ filename, content, mode = "overwrite" }) => {
+                 logMessage('TOOL_EXEC', `尝试更新文件: ${filename} (模式: ${mode})`);
+                 if (!filename || typeof filename !== 'string') {
+                     throw new Error("文件名无效或缺失。");
+                 }
+                 if (!files.hasOwnProperty(filename)) {
+                    throw new Error(`文件 "${filename}" 不存在，无法更新。请先创建文件。`);
+                 }
+                  if (typeof content !== 'string') {
+                     // Allow empty string but not other types
+                     if (content === null || content === undefined) {
+                         content = ''; // Treat null/undefined as empty string for update
+                     } else {
+                         throw new Error("要写入的内容必须是文本字符串。");
+                     }
+                 }
+
+                 if (mode === 'overwrite') {
+                    files[filename] = content;
+                    logMessage('TOOL_EXEC', `文件 ${filename} 已被覆盖.`);
+                 } else if (mode === 'append') {
+                    files[filename] += content;
+                    logMessage('TOOL_EXEC', `内容已追加到文件 ${filename}.`);
+                 } else {
+                     throw new Error(`无效的更新模式: "${mode}". 请使用 "overwrite" 或 "append".`);
+                 }
+
+                 saveFilesToLocalStorage();
+                 renderFileList(); // Update UI in case filename changed (though not in this function)
+                 return `文件 "${filename}" 已成功更新 (模式: ${mode})。`;
+            },
+             renameFile: ({ old_filename, new_filename }) => {
+                logMessage('TOOL_EXEC', `尝试重命名文件: ${old_filename} -> ${new_filename}`);
+                 if (!old_filename || typeof old_filename !== 'string' || !new_filename || typeof new_filename !== 'string' || new_filename.trim() === '') {
+                     throw new Error("旧文件名或新文件名无效或缺失。");
+                 }
+                 if (!files.hasOwnProperty(old_filename)) {
+                     throw new Error(`要重命名的文件 "${old_filename}" 不存在。`);
+                 }
+                 if (files.hasOwnProperty(new_filename)) {
+                     throw new Error(`目标文件名 "${new_filename}" 已存在，无法重命名。`);
+                 }
+                 if (old_filename === new_filename) {
+                      throw new Error(`旧文件名和新文件名相同 ("${old_filename}")。`);
+                 }
+
+                 files[new_filename] = files[old_filename]; // Copy content to new name
+                 delete files[old_filename]; // Delete old entry
+                 saveFilesToLocalStorage();
+                 renderFileList();
+                 logMessage('TOOL_EXEC', `文件 ${old_filename} 已成功重命名为 ${new_filename}.`);
+                 return `文件 "${old_filename}" 已成功重命名为 "${new_filename}"。`;
+            },
+            listFiles: () => {
+                 logMessage('TOOL_EXEC', `尝试列出文件`);
+                const fileList = Object.keys(files);
+                if (fileList.length === 0) {
+                     logMessage('TOOL_EXEC', `文件列表为空.`);
+                    return "当前没有文件。";
+                } else {
+                    logMessage('TOOL_EXEC', `找到文件: ${fileList.join(', ')}`);
+                    return "当前文件列表:\n" + fileList.join('\n');
+                }
+            }
+            // Add functions for other tools here
+        };
+
+        // --- Chat Logic ---
+        function sendMessage() {
+            const userInput = USER_INPUT.value.trim();
+            if (!userInput) return;
+
+             // Get current settings
+            const apiKey = API_KEY_INPUT.value;
+            const apiUrl = API_URL_INPUT.value;
+            if (!apiKey || !apiUrl) {
+                 renderMessage('system', '错误：请先在设置中填写 API Key 和 API URL。', null, null, 'error-message');
+                return;
+            }
+
+            logMessage('INFO', `发送用户消息: "${userInput}"`);
+            renderMessage('user', userInput);
+            conversationHistory.push({ role: 'user', content: userInput });
+
+            USER_INPUT.value = ''; // Clear input field
+            autoResizeTextarea(); // Reset height after clearing
+            USER_INPUT.focus(); // Keep focus on input
+
+            // Prepare messages for API (limit context)
+            const contextMemory = parseInt(CONTEXT_MEMORY_INPUT.value) || 50;
+            const messagesToSend = conversationHistory.slice(-contextMemory);
+
+            // Start potential assistant message rendering
+            currentAssistantMessageDiv = renderMessage('assistant', '...', null, null); // Placeholder
+             currentAssistantContent = "";
+             accumulatedToolCalls = [];
+
+            // Make API call
+            callAPI(messagesToSend, tools, apiKey, apiUrl);
+        }
+
+        async function callAPI(messages, availableTools, apiKey, apiUrl, retryCount = 0) {
+            const streamEnabled = STREAM_CHECKBOX.checked;
+            const requestBody = {
+                model: MODEL_SELECT.value,
+                messages: messages,
+                temperature: parseFloat(TEMPERATURE_INPUT.value) || 0.7,
+                max_tokens: parseInt(MAX_TOKENS_INPUT.value) || 60000,
+                stream: streamEnabled,
+                // Only include tools if there are any defined and the model might use them
+                ...(availableTools && availableTools.length > 0 && { tools: availableTools, tool_choice: "auto" })
+             };
+
+            logMessage('API_CALL', `请求 ${apiUrl} (Stream: ${streamEnabled}, Retry: ${retryCount}) Body: ${JSON.stringify(requestBody, null, 2)}`);
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                     let errorBody = 'Unknown error';
+                    try {
+                         errorBody = await response.text(); // Try to get more details
+                    } catch (e) { /* Ignore */ }
+                    throw new Error(`HTTP error! status: ${response.status} ${response.statusText} - ${errorBody}`);
+                }
+
+                if (streamEnabled && response.body) {
+                    await processStream(response);
+                } else {
+                     // Handle non-streaming response (less likely based on request but good fallback)
+                    const data = await response.json();
+                     logMessage('API_RESP', `收到非流式响应: ${JSON.stringify(data)}`);
+                    if (data.choices && data.choices[0] && data.choices[0].message) {
+                        const message = data.choices[0].message;
+                        handleAssistantResponse(message); // Process final message
+                    } else {
+                         throw new Error("无效的非流式 API 响应格式");
+                    }
+                }
+             } catch (error) {
+                 logMessage('ERROR', `API 调用失败 (Retry: ${retryCount}): ${error}`);
+                  if (retryCount < MAX_TOOL_RETRY) {
+                      logMessage('INFO', `在 ${2**retryCount * 1000}ms 后重试 API 调用...`);
+                      renderSystemMessage(`API 调用失败，正在重试 (${retryCount + 1}/${MAX_TOOL_RETRY})... 错误: ${error.message}`);
+                      await new Promise(resolve => setTimeout(resolve, 2**retryCount * 1000)); // Exponential backoff
+                      // Need to resend the *same* messages that caused the error
+                      callAPI(messages, availableTools, apiKey, apiUrl, retryCount + 1);
+                  } else {
+                     renderSystemMessage(`API 调用失败且已达到最大重试次数: ${error.message}`, 'error-message');
+                      // Update the placeholder message with error
+                     if (currentAssistantMessageDiv) {
+                        currentAssistantMessageDiv.innerHTML = `<strong>助手 (错误)</strong><div class="error-message">API 调用失败: ${error.message}</div>`;
+                        currentAssistantMessageDiv = null; // Stop further updates
+                     }
+                      conversationHistory.push({ role: 'assistant', content: `[API 调用失败: ${error.message}]` }); // Add error marker to history
+                  }
+             }
+        }
+
+        async function processStream(response) {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let finalAssistantMessage = null; // To store the complete message object
+
+            logMessage('STREAM', '开始处理流式响应...');
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    logMessage('STREAM', '流结束.');
+                    break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+                // Process line by line (Server-Sent Events format)
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep the last (potentially incomplete) line
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const dataContent = line.substring(6).trim();
+                        if (dataContent === '[DONE]') {
+                             logMessage('STREAM', '收到 [DONE] 信号.');
+                            continue; // End of stream signal
+                        }
+                        try {
+                            const delta = JSON.parse(dataContent);
+                            if (delta.choices && delta.choices[0] && delta.choices[0].delta) {
+                                const deltaContent = delta.choices[0].delta;
+
+                                // --- Handle Content Delta ---
+                                if (deltaContent.content) {
+                                    currentAssistantContent += deltaContent.content;
+                                     if (currentAssistantMessageDiv) {
+                                        // Update the content, re-parse markdown, re-highlight
+                                        const parsedContent = marked.parse(currentAssistantContent || "...");
+                                        currentAssistantMessageDiv.querySelector('.content').innerHTML = parsedContent;
+                                        // Re-highlight all code blocks within this message
+                                        currentAssistantMessageDiv.querySelectorAll('pre code').forEach((block) => {
+                                             hljs.highlightElement(block);
+                                        });
+                                    }
+                                }
+
+                                // --- Handle Tool Call Delta ---
+                                if (deltaContent.tool_calls && deltaContent.tool_calls.length > 0) {
+                                     logMessage('STREAM_TOOL', `收到工具调用 Delta: ${JSON.stringify(deltaContent.tool_calls)}`);
+                                    // The API might send tool calls in chunks. Accumulate them.
+                                    deltaContent.tool_calls.forEach(toolCallDelta => {
+                                         if (toolCallDelta.index === undefined) return; // Invalid chunk
+
+                                        // Initialize if it's the first chunk for this index
+                                        if (!accumulatedToolCalls[toolCallDelta.index]) {
+                                             accumulatedToolCalls[toolCallDelta.index] = {
+                                                 id: null,
+                                                 type: 'function', // Assuming only function type for now
+                                                 function: { name: null, arguments: '' } // Start with empty args string
+                                             };
+                                             // Display "attempting to use tool" message immediately
+                                             renderMessage('system', `AI 正在尝试使用工具... (ID: ${toolCallDelta.id || '未知'})`, null, null, 'tool-call-message');
+                                        }
+
+                                        const currentTool = accumulatedToolCalls[toolCallDelta.index];
+
+                                        // Update ID if present
+                                         if (toolCallDelta.id) {
+                                            currentTool.id = toolCallDelta.id;
+                                        }
+                                        // Update function name if present
+                                         if (toolCallDelta.function && toolCallDelta.function.name) {
+                                             currentTool.function.name = toolCallDelta.function.name;
+                                         }
+                                        // Append argument chunks
+                                        if (toolCallDelta.function && toolCallDelta.function.arguments) {
+                                            currentTool.function.arguments += toolCallDelta.function.arguments;
+                                        }
+                                    });
+                                }
+
+                                // --- Handle Finish Reason ---
+                                if (delta.choices[0].finish_reason) {
+                                    const reason = delta.choices[0].finish_reason;
+                                    logMessage('STREAM', `完成原因: ${reason}`);
+
+                                     // Store the complete assistant message object from the *last* delta
+                                    // This structure is needed for the conversation history
+                                     if (delta.choices[0].message) {
+                                        finalAssistantMessage = delta.choices[0].message;
+                                     } else {
+                                         // Reconstruct if not provided directly in the last delta
+                                         finalAssistantMessage = {
+                                             role: 'assistant',
+                                             content: currentAssistantContent,
+                                             tool_calls: accumulatedToolCalls.length > 0 ? accumulatedToolCalls : undefined
+                                         };
+                                     }
+
+
+                                    if (reason === 'stop') {
+                                         handleAssistantResponse(finalAssistantMessage);
+                                    } else if (reason === 'tool_calls') {
+                                         // Ensure all argument strings are fully received before executing
+                                        logMessage('STREAM_TOOL', `准备执行工具调用: ${JSON.stringify(accumulatedToolCalls)}`);
+                                        handleAssistantResponse(finalAssistantMessage); // Add assistant's tool request to history
+                                        await executeToolCalls(accumulatedToolCalls);
+                                    } else if (reason === 'length') {
+                                        logMessage('WARN', '响应因达到 max_tokens 而被截断.');
+                                        renderSystemMessage('警告：AI 的回复可能因为达到最大长度而被截断。', 'system-message');
+                                        handleAssistantResponse(finalAssistantMessage); // Still add what we got
+                                    } else {
+                                         logMessage('WARN', `未处理的完成原因: ${reason}`);
+                                         handleAssistantResponse(finalAssistantMessage); // Add whatever we got
+                                    }
+                                     // Reset for next message
+                                    currentAssistantMessageDiv = null;
+                                    currentAssistantContent = "";
+                                    accumulatedToolCalls = [];
+                                }
+                            }
+                         } catch (error) {
+                            logMessage('ERROR', `解析流数据失败: ${error} - Data: "${dataContent}"`);
+                            // Don't stop the stream, try to continue
+                         }
+                    }
+                }
+            }
+            // Handle any remaining buffer content if needed (usually empty)
+             if (buffer.trim()) {
+                 logMessage('WARN', `流结束后缓冲区仍有内容: "${buffer}"`);
+             }
+
+             // If the stream ended without a finish_reason (unlikely but possible)
+             if (currentAssistantMessageDiv && !finalAssistantMessage) {
+                 logMessage('WARN', '流结束但未收到完成原因或最终消息结构.');
+                  const reconstructedMessage = {
+                     role: 'assistant',
+                     content: currentAssistantContent,
+                     // We don't know if tool calls were intended here, err on the side of caution
+                 };
+                 handleAssistantResponse(reconstructedMessage);
+                  currentAssistantMessageDiv = null; // Clear the placeholder/updater
+                  currentAssistantContent = "";
+                 accumulatedToolCalls = [];
+             }
+        }
+
+        // Handles adding the complete assistant message (text or tool call request) to history
+        function handleAssistantResponse(message) {
+            if (!message) {
+                 logMessage('WARN', 'handleAssistantResponse 收到空消息');
+                 return;
+            }
+
+            logMessage('ASSISTANT', `处理最终助手响应: ${JSON.stringify(message)}`);
+
+            // Update the final display of the assistant message if it was being streamed
+             if (currentAssistantMessageDiv) {
+                 const finalContent = message.content || (message.tool_calls ? "[请求使用工具]" : "[空响应]");
+                 const parsedContent = marked.parse(finalContent);
+                 currentAssistantMessageDiv.querySelector('.content').innerHTML = parsedContent;
+                 currentAssistantMessageDiv.querySelectorAll('pre code').forEach((block) => {
+                     hljs.highlightElement(block);
+                 });
+                 currentAssistantMessageDiv = null; // Mark as finalized
+             } else if (!message.tool_calls) {
+                 // If not streamed (e.g., non-stream response or error fallback), render it now
+                 renderMessage('assistant', message.content || "[空响应]");
+             }
+
+             // Add the *structured* message to history
+             // Important: Store the tool_calls array if present, even if content is null/empty
+             const historyEntry = {
+                role: 'assistant',
+                content: message.content || null, // OpenAI standard often uses null content when tool_calls are present
+                 ...(message.tool_calls && { tool_calls: message.tool_calls }) // Conditionally add tool_calls
+             };
+             conversationHistory.push(historyEntry);
+
+             logMessage('HISTORY', `助手消息已添加到历史: ${JSON.stringify(historyEntry)}`);
+        }
+
+
+        async function executeToolCalls(toolCalls) {
+            if (!toolCalls || toolCalls.length === 0) {
+                logMessage('WARN', 'executeToolCalls 被调用但没有工具调用需要执行。');
+                return;
+            }
+
+            const toolResults = []; // Results to send back to the AI
+
+            for (const toolCall of toolCalls) {
+                if (!toolCall || !toolCall.function || !toolCall.id) {
+                     logMessage('ERROR', `无效的工具调用结构: ${JSON.stringify(toolCall)}`);
+                     // Provide an error result back to the AI for this specific broken call
+                     if (toolCall && toolCall.id) {
+                         toolResults.push({
+                             tool_call_id: toolCall.id,
+                             role: "tool",
+                             name: toolCall.function?.name || "unknown_function",
+                             content: `[工具执行错误：内部错误 - 无效的工具调用结构]`,
+                         });
+                     }
+                    continue; // Skip to the next tool call
+                }
+
+                const functionName = toolCall.function.name;
+                const toolCallId = toolCall.id;
+                let args = {};
+                let result = null;
+                let errorOccurred = false;
+                let attempt = 0;
+
+                 // Display execution attempt
+                 const execMsg = renderMessage('system', `执行工具: ${functionName} (ID: ${toolCallId})...`, null, toolCallId, 'tool-call-message');
+
+
+                while (attempt <= MAX_TOOL_RETRY) {
+                     errorOccurred = false;
+                    try {
+                         logMessage('TOOL_EXEC', `尝试执行工具: ${functionName}, ID: ${toolCallId}, 尝试次数: ${attempt + 1}`);
+                        args = JSON.parse(toolCall.function.arguments || '{}');
+                         logMessage('TOOL_EXEC', `参数: ${JSON.stringify(args)}`);
+
+                        if (toolFunctions[functionName]) {
+                            // Execute the corresponding JS function
+                            result = await toolFunctions[functionName](args); // Use await in case tool function becomes async
+                            logMessage('TOOL_RESULT', `工具 ${functionName} (ID: ${toolCallId}) 成功执行. 结果类型: ${typeof result}`);
+                            break; // Success, exit retry loop
+                        } else {
+                            throw new Error(`未知的工具函数: ${functionName}`);
+                        }
+                    } catch (error) {
+                         errorOccurred = true;
+                        logMessage('ERROR', `工具执行失败: ${functionName} (ID: ${toolCallId}), 尝试次数: ${attempt + 1}. 错误: ${error}`);
+                         result = `[工具执行错误: ${error.message}]`; // Format error for AI
+
+                        if (error instanceof SyntaxError) {
+                             // JSON parsing error - unlikely AI will fix this by itself, don't retry parse errors
+                            logMessage('ERROR', '参数 JSON 解析错误，不重试。');
+                             attempt = MAX_TOOL_RETRY + 1; // Force exit loop
+                        } else {
+                            attempt++;
+                            if (attempt <= MAX_TOOL_RETRY) {
+                                logMessage('INFO', `在 ${attempt * 500}ms 后重试工具执行...`);
+                                 // Update execution message
+                                 execMsg.innerHTML = `<strong>系统 (重试 ${attempt})</strong> 执行工具: ${functionName} (ID: ${toolCallId}) 失败，正在重试... 错误: ${error.message}`;
+                                await new Promise(resolve => setTimeout(resolve, attempt * 500)); // Simple linear backoff for tool retry
+                            } else {
+                                logMessage('ERROR', `工具 ${functionName} (ID: ${toolCallId}) 达到最大重试次数.`);
+                            }
+                        }
+                    }
+                } // End retry loop
+
+
+                // Display final result (success or final error)
+                const resultMessageClass = errorOccurred ? 'error-message' : 'tool-result-message';
+                 // Update or replace the execution message
+                 execMsg.className = `message ${resultMessageClass}`; // Change background
+                 execMsg.innerHTML = `<strong>工具结果 (${functionName} / ${toolCallId})</strong><div>${typeof result === 'string' ? result : JSON.stringify(result)}</div>`;
+
+
+                // Prepare result for the next API call
+                 toolResults.push({
+                     tool_call_id: toolCallId,
+                     role: "tool",
+                     name: functionName,
+                     content: typeof result === 'string' ? result : JSON.stringify(result), // API expects string content
+                 });
+            } // End loop through toolCalls
+
+            // Add all tool results to conversation history
+            toolResults.forEach(res => conversationHistory.push(res));
+             logMessage('HISTORY', `工具结果已添加到历史: ${JSON.stringify(toolResults)}`);
+
+             // Make a follow-up API call with the tool results
+             logMessage('API_CALL', '发起包含工具结果的后续 API 调用...');
+             const contextMemory = parseInt(CONTEXT_MEMORY_INPUT.value) || 50;
+             const messagesToSend = conversationHistory.slice(-contextMemory); // Get latest including tool results
+
+             // Start new assistant message placeholder
+             currentAssistantMessageDiv = renderMessage('assistant', '...', null, null);
+             currentAssistantContent = "";
+             accumulatedToolCalls = []; // Reset tool calls for the *next* response
+
+             const apiKey = API_KEY_INPUT.value;
+             const apiUrl = API_URL_INPUT.value;
+             callAPI(messagesToSend, tools, apiKey, apiUrl); // Call API again with results
+        }
+
+        // --- Rendering ---
+         function renderMessage(role, content, toolCalls = null, toolCallId = null, extraClass = '') {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            let roleDisplay = role;
+            let contentToRender = content || ""; // Ensure content is never null/undefined for rendering
+
+            switch (role) {
+                case 'user':
+                    messageDiv.classList.add('user-message');
+                    roleDisplay = '你';
+                    break;
+                case 'assistant':
+                    messageDiv.classList.add('assistant-message');
+                     roleDisplay = '助手';
+                    // If assistant is requesting tools, show that instead of potentially null content
+                     if (toolCalls && toolCalls.length > 0 && !contentToRender) {
+                         contentToRender = `[正在请求使用 ${toolCalls.length} 个工具...]`;
+                     }
+                    break;
+                 case 'tool': // Displaying tool *results*
+                    messageDiv.classList.add('tool-result-message');
+                     // We need the function name which isn't directly in the 'tool' role message
+                     // Let's rely on the caller (executeToolCalls) to format the content better
+                     roleDisplay = `工具结果`; // Simplified display
+                    break;
+                case 'system': // For system info, errors, tool call attempts etc.
+                     messageDiv.classList.add('system-message');
+                     roleDisplay = '系统';
+                    break;
+                default:
+                    messageDiv.classList.add('system-message'); // Fallback style
+            }
+
+            if (extraClass) {
+                messageDiv.classList.add(extraClass); // Add specific classes like 'tool-call-message', 'error-message'
+                 // Adjust role display based on extra class if needed
+                 if (extraClass === 'tool-call-message') roleDisplay = '系统 (工具调用)';
+                 if (extraClass === 'error-message') roleDisplay = '系统 (错误)';
+            }
+
+
+             // Use marked to parse Markdown content
+            // Handle potential errors during parsing, though marked is generally robust
+            let parsedContent;
+             try {
+                 parsedContent = marked.parse(contentToRender);
+             } catch (e) {
+                 logMessage('ERROR', `Markdown 解析失败: ${e}`);
+                 parsedContent = `<pre>Markdown 解析错误:\n${contentToRender}</pre>`; // Show raw content on error
+             }
+
+
+            messageDiv.innerHTML = `
+                <strong>${roleDisplay}${toolCallId ? ` (ID: ${toolCallId})` : ''}</strong>
+                <div class="content">${parsedContent}</div>
+            `;
+            CHAT_LOG.appendChild(messageDiv);
+
+            // Apply highlighting to any new code blocks added by marked
+            messageDiv.querySelectorAll('pre code').forEach((block) => {
+                try {
+                     hljs.highlightElement(block);
+                } catch (e) {
+                     logMessage('ERROR', `代码高亮失败: ${e}`);
+                }
+            });
+
+
+            // Scroll to the bottom
+            CHAT_LOG.scrollTop = CHAT_LOG.scrollHeight;
+
+            return messageDiv; // Return the created element, useful for streaming updates
+        }
+
+         function renderSystemMessage(message, typeClass = 'system-message') {
+             logMessage('SYSTEM', message);
+             renderMessage('system', message, null, null, typeClass);
+         }
+
+        // --- Utility Functions ---
+        function clearConversation() {
+            logMessage('INFO', '清空对话历史.');
+            conversationHistory = [];
+            CHAT_LOG.innerHTML = ''; // Clear visual chat log
+            // Add initial system message back?
+             renderMessage('system', '对话已清空。你好！有什么可以帮你的吗？');
+             // Files (`files` object and localStorage) are intentionally NOT cleared here
+             // renderFileList(); // Refresh just in case (though should be static)
+        }
+
+    </script>
+</body>
+</html>
